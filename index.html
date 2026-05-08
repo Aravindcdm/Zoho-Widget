@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Zoho CRM Blueprint Widget</title>
+
+    <script src="https://live.zwidgets.com/js-sdk/1.2/ZohoEmbededAppSDK.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+
+        iframe {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Wikipedia Viewer</h2>
+
+    <iframe src="https://www.wikipedia.org/"></iframe>
+
+    <br><br>
+
+    <button onclick="continueBlueprint()">
+        Continue
+    </button>
+
+    <script>
+
+        ZOHO.embeddedApp.on("PageLoad", function(data) {
+            console.log("Blueprint Widget Loaded", data);
+        });
+
+        function continueBlueprint() {
+            ZOHO.CRM.BLUEPRINT.proceed()
+                .then(function(response) {
+                    console.log("Blueprint Proceeded", response);
+                })
+                .catch(function(error) {
+                    console.log(error);
+                });
+        }
+
+        ZOHO.embeddedApp.init();
+
+    </script>
+
+</body>
+</html>
