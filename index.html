@@ -2,6 +2,200 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <title>Bike Product Selector</title>
+
+    <script src="https://live.zwidgets.com/js-sdk/1.0/ZohoEmbededAppSDK.min.js"></script>
+
+    <style>
+        body
+        {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h2
+        {
+            margin-bottom: 20px;
+        }
+
+        select,
+        input,
+        button
+        {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        button
+        {
+            cursor: pointer;
+        }
+
+        .success
+        {
+            color: green;
+            margin-top: 10px;
+        }
+
+        .error
+        {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Select Bike Product</h2>
+
+    <label>Bike</label>
+    <select id="bikeSelect">
+        <option value="">Loading products...</option>
+    </select>
+
+    <label>Quantity</label>
+    <input type="number" id="quantity" value="1" min="1">
+
+    <button onclick="addProduct()">Add Product</button>
+
+    <div id="message"></div>
+
+<script>
+
+let dealId = "";
+let selectedProducts = [];
+
+ZOHO.embeddedApp.on("PageLoad", function(data)
+{
+    dealId = data.EntityId[0];
+
+    loadProducts();
+});
+
+ZOHO.embeddedApp.init();
+
+
+// LOAD PRODUCTS
+function loadProducts()
+{
+    ZOHO.CRM.API.coql({
+        select_query:
+        "select id, Product_Name, Unit_Price from Products where Product_Category = 'Bike'"
+    })
+    .then(function(response)
+    {
+        let products = response.data;
+
+        let dropdown = document.getElementById("bikeSelect");
+
+        dropdown.innerHTML = "";
+
+        if(products.length == 0)
+        {
+            dropdown.innerHTML =
+            '<option>No Products Found</option>';
+
+            return;
+        }
+
+        products.forEach(function(product)
+        {
+            let option = document.createElement("option");
+
+            option.value = product.id;
+
+            option.text =
+                product.Product_Name +
+                " - ₹" +
+                product.Unit_Price;
+
+            dropdown.appendChild(option);
+        });
+    });
+}
+
+
+// ADD PRODUCT TO SUBFORM
+function addProduct()
+{
+    let productId =
+        document.getElementById("bikeSelect").value;
+
+    let quantity =
+        parseInt(document.getElementById("quantity").value);
+
+    let message =
+        document.getElementById("message");
+
+    message.innerHTML = "";
+
+    if(productId == "")
+    {
+        message.innerHTML =
+        '<div class="error">Please select a bike.</div>';
+
+        return;
+    }
+
+    if(quantity <= 0)
+    {
+        message.innerHTML =
+        '<div class="error">Quantity must be greater than 0.</div>';
+
+        return;
+    }
+
+    let subformRow =
+    {
+        Product:
+        {
+            id: productId
+        },
+
+        Quantity_Ordered: quantity
+    };
+
+    selectedProducts.push(subformRow);
+
+    ZOHO.CRM.API.updateRecord({
+        Entity: "Deals",
+
+        APIData:
+        {
+            id: dealId,
+
+            Products_Subform: selectedProducts
+        }
+    })
+    .then(function(response)
+    {
+        console.log(response);
+
+        message.innerHTML =
+        '<div class="success">Product added successfully.</div>';
+    })
+    .catch(function(error)
+    {
+        console.log(error);
+
+        message.innerHTML =
+        '<div class="error">Failed to add product.</div>';
+    });
+}
+
+</script>
+
+</body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
     <title>Zoho CRM Blueprint Widget</title>
 
     <script src="https://live.zwidgets.com/js-sdk/1.2/ZohoEmbededAppSDK.min.js"></script>
@@ -60,4 +254,4 @@
     </script>
 
 </body>
-</html>
+</html> -->
