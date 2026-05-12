@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
+
     <title>Bike Product Selector</title>
 
     <script src="https://live.zwidgets.com/js-sdk/1.0/ZohoEmbededAppSDK.min.js"></script>
 
     <style>
+
         body
         {
             font-family: Arial, sans-serif;
@@ -45,7 +48,9 @@
             color: red;
             margin-top: 10px;
         }
+
     </style>
+
 </head>
 
 <body>
@@ -53,24 +58,34 @@
     <h2>Select Bike Product</h2>
 
     <label>Bike</label>
+
     <select id="bikeSelect">
-        <option value="">Loading products...</option>
+        <option>Loading products...</option>
     </select>
 
     <label>Quantity</label>
-    <input type="number" id="quantity" value="1" min="1">
 
-    <button onclick="addProduct()">Add Product</button>
+    <input
+        type="number"
+        id="quantity"
+        value="1"
+        min="1"
+    >
+
+    <button onclick="addProduct()">
+        Add Product
+    </button>
 
     <div id="message"></div>
 
 <script>
 
 let dealId = "";
-let selectedProducts = [];
 
 ZOHO.embeddedApp.on("PageLoad", function(data)
 {
+    console.log(data);
+
     dealId = data.EntityId[0];
 
     loadProducts();
@@ -84,49 +99,66 @@ function loadProducts()
 {
     ZOHO.CRM.API.coql({
         select_query:
-        "select id, Product_Name, Unit_Price from Products where Product_Category = 'Bike'"
+        "select id, Product_Name, Unit_Price, Product_Category from Products where Product_Category in ('Sports Bike','Adventure Bike','Electric Bike','Cruiser','Scooter')"
     })
+
     .then(function(response)
     {
+        console.log(response);
+
         let products = response.data;
 
-        let dropdown = document.getElementById("bikeSelect");
+        let dropdown =
+            document.getElementById("bikeSelect");
 
         dropdown.innerHTML = "";
 
-        if(products.length == 0)
+        if(!products || products.length == 0)
         {
             dropdown.innerHTML =
-            '<option>No Products Found</option>';
+                "<option>No Products Found</option>";
 
             return;
         }
 
         products.forEach(function(product)
         {
-            let option = document.createElement("option");
+            let option =
+                document.createElement("option");
 
             option.value = product.id;
 
             option.text =
                 product.Product_Name +
-                " - ₹" +
+                " (" +
+                product.Product_Category +
+                ") - ₹" +
                 product.Unit_Price;
 
             dropdown.appendChild(option);
         });
+    })
+
+    .catch(function(error)
+    {
+        console.log(error);
+
+        alert(JSON.stringify(error));
     });
 }
 
 
-// ADD PRODUCT TO SUBFORM
+
+// ADD PRODUCT TO DEAL SUBFORM
 function addProduct()
 {
     let productId =
         document.getElementById("bikeSelect").value;
 
     let quantity =
-        parseInt(document.getElementById("quantity").value);
+        parseInt(
+            document.getElementById("quantity").value
+        );
 
     let message =
         document.getElementById("message");
@@ -136,7 +168,7 @@ function addProduct()
     if(productId == "")
     {
         message.innerHTML =
-        '<div class="error">Please select a bike.</div>';
+            '<div class="error">Please select a product.</div>';
 
         return;
     }
@@ -144,53 +176,93 @@ function addProduct()
     if(quantity <= 0)
     {
         message.innerHTML =
-        '<div class="error">Quantity must be greater than 0.</div>';
+            '<div class="error">Quantity must be greater than 0.</div>';
 
         return;
     }
 
-    let subformRow =
-    {
-        Product:
-        {
-            id: productId
-        },
 
-        Quantity_Ordered: quantity
-    };
-
-    selectedProducts.push(subformRow);
-
-    ZOHO.CRM.API.updateRecord({
+    // GET CURRENT DEAL RECORD
+    ZOHO.CRM.API.getRecord({
         Entity: "Deals",
-
-        APIData:
-        {
-            id: dealId,
-
-            Products_Subform: selectedProducts
-        }
+        RecordID: dealId
     })
-    .then(function(response)
+
+    .then(function(recordResponse)
     {
-        console.log(response);
+        console.log(recordResponse);
 
-        message.innerHTML =
-        '<div class="success">Product added successfully.</div>';
+        let existingRows = [];
+
+        if(
+            recordResponse.data[0].Interested != null
+        )
+        {
+            existingRows =
+                recordResponse.data[0].Interested;
+        }
+
+
+        // ADD NEW ROW
+        existingRows.push({
+
+            Product:
+            {
+                id: productId
+            },
+
+            Quantity_Ordered: quantity
+
+        });
+
+
+        // UPDATE DEAL
+        ZOHO.CRM.API.updateRecord({
+
+            Entity: "Deals",
+
+            APIData:
+            {
+                id: dealId,
+
+                Interested: existingRows
+            }
+
+        })
+
+        .then(function(updateResponse)
+        {
+            console.log(updateResponse);
+
+            message.innerHTML =
+                '<div class="success">Product added successfully.</div>';
+        })
+
+        .catch(function(error)
+        {
+            console.log(error);
+
+            message.innerHTML =
+                '<div class="error">Failed to update deal.</div>';
+        });
+
     })
+
     .catch(function(error)
     {
         console.log(error);
 
         message.innerHTML =
-        '<div class="error">Failed to add product.</div>';
+            '<div class="error">Failed to fetch deal.</div>';
     });
+
 }
 
 </script>
 
 </body>
-</html> 
+
+</html>
 
 <!-- <!DOCTYPE html>
 <html>
